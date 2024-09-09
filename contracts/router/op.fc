@@ -1,0 +1,20 @@
+#include "../imports/nft/op.fc";
+
+const int op::router::deploy = "op::router::deploy"c; ;;bef4e98f 3203721615
+const int op::router::init = "op::router::init"c; ;;e5451fab 3846512555
+
+const int op::router::create = "op::router::create"c; ;;a319318e 2736337294 notification
+const int op::router::create_finished = "op::router::create_finished"c; ;;02b1dc3f 45210687
+
+const int op::router::claim = "op::router::claim"c; ;;b1262099 2972065945
+const int op::router::withdraw = "op::router::withdraw"c; ;;16421ca0 373431456 由red_packet调用,用于给用户打款
+
+const int op::router::close = "op::router::close"c; ;;054e7f7a 89030522
+const int op::router::refund = "op::router::refund"c; ;;77e3c52d 2011415853
+
+const int op::report::report_create = "op::report::report_create"c; ;;9e0fe4ce 2651841742
+const int op::report::report_withdraw = "op::report::report_withdraw"c; ;;108248e8 276973800
+const int op::report::report_refund = "op::report::report_refund"c; ;;4af5106d 1257574509
+
+const int state::router::initializing = 0;
+const int state::router::normal = 1;

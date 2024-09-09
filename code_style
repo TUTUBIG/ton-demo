@@ -1,0 +1,43 @@
+export, public
+
+struct:
+namespace::Struct_name
+
+method:
+namespace::method_name
+namespace::Struct_name::se
+namespace::Struct_name::de
+namespace::Struct_name::new
+namespace::Struct_name::method_name
+
+constant:
+namespace::CONSTANT
+namespace::CONSTANT_OUTER::CONSTANT_INNER
+
+//==========================================================
+
+in module,private
+
+struct:
+@Struct
+
+method:  private is private for the module, all files in the same module is fine to use private methods among files
+@method_name
+@Struct_name::se
+@Struct_name::de
+@Struct_name::new
+@Struct_name::method_name
+
+local variable:
+Struct_name::field   Struct_name leading "scope"
+field    no prefix
+
+method "global": 包括se/de出来的
+_field:  leading underscore
+
+method "arg-in":
+field    no prefix
+
+method "arg-out":
+$field:  leading dollar sign
+

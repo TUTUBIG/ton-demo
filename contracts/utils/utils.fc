@@ -1,0 +1,167 @@
+#include "math.fc";
+#include "../imports/stdlib.fc";
+{-
+    utils.func
+
+    Utility library for FunC.
+-}
+
+;; private
+(int) _::utils::mod(int x, int y) asm "MOD";
+
+const int TRUE:u1 = 1;
+const int FALSE:u1 = 0;
+
+(slice) utils::get_contract_address(int workchain, cell state_init) inline {
+    return begin_cell()
+        .store_uint(4, 3)
+        .store_int(workchain, 8)
+        .store_uint(cell_hash(state_init), 256)
+        .end_cell().begin_parse();
+}
+
+(int) utils::to_ton(int amount) inline {
+    return amount * 1000000000;
+}
+
+(int) utils::from_ton(int amount) inline {
+    return amount / 1000000000;
+}
+
+(int) utils::get_workchain(slice address) inline {
+    (int wc, _) = parse_var_addr(address);
+    return wc;
+}
+
+() utils::force_chain(int workchain, slice address, int error_code) impure inline {
+    (int wc) = utils::get_workchain(address);
+    throw_unless(error_code, wc == workchain);
+}
+
+(int) utils::get_query_id() inline {
+    return now() + _::utils::mod(cur_lt(), 4294967296);
+}
+
+(slice) utils::get_serialized_address(int workchain, int address) inline {
+    return (begin_cell()
+        .store_uint(2, 2)  ;; Is std address
+        .store_uint(0, 1)  ;; Non-unicast
+        .store_uint(workchain, 8)  ;; Basic workchain
+        .store_uint(address, 256) ;; Address hash
+    ).end_cell().begin_parse();
+}
+
+slice addr_none() asm "<b b{00} s, b> <s PUSHSLICE";
+
+int builder_null?(builder b) asm "ISNULL";
+
+int workchain() asm "0 PUSHINT";
+
+() force_chain(slice addr) impure {
+    (int wc, _) = parse_std_addr(addr);
+    throw_unless(333, wc == workchain());
+}
+
+slice calculate_address(cell state_init) inline {
+    return begin_cell()
+        .store_uint(4, 3)
+        .store_int(workchain(), 8)
+        .store_uint(cell_hash(state_init), 256)
+        .end_cell()
+        .begin_parse();
+}
+
+;;给出当前合约的balance, 和 msg incoming value
+;;根据合约保底(锁定) 的reserve_value 和 合约维护storage的阈值 contract_maintenance
+;;计算出本次需要冲入多少ton来抵消storage fee和"上一次"合约运算消耗掉的computation gas (通常用gas_fee提前打入,但是也会有过量不需要补偿或者不足需要补偿的情况)
+(int) calc_reserve_and_storage_gap(int my_balance, int msg_value, int reserve_value, int contract_maintenance) {
+    int balance_before_msg = my_balance - msg_value;
+    throw_unless(853, 0 <= balance_before_msg); ;;what is wrong, tvm
+    return (contract_maintenance + reserve_value) - min(balance_before_msg, contract_maintenance + reserve_value);
+}
+
+(slice) @uint_to_slice(int input:u) {
+    if (input:u == 0) {
+        return "0";
+    }
+    if (input:u == 1) {
+        return "1";
+    }
+    if (input:u == 2) {
+        return "2";
+    }
+    if (input:u == 3) {
+        return "3";
+    }
+    if (input:u == 4) {
+        return "4";
+    }
+    if (input:u == 5) {
+        return "5";
+    }
+    if (input:u == 6) {
+        return "6";
+    }
+    if (input:u == 7) {
+        return "7";
+    }
+    if (input:u == 8) {
+        return "8";
+    }
+    if (input:u == 9) {
+        return "9";
+    }
+    if (input:u == 10) {
+        return "a";
+    }
+    if (input:u == 11) {
+        return "b";
+    }
+    if (input:u == 12) {
+        return "c";
+    }
+    if (input:u == 13) {
+        return "d";
+    }
+    if (input:u == 14) {
+        return "e";
+    }
+    if (input:u == 15) {
+        return "f";
+    }
+    throw(689);
+    return "";
+}
+
+(slice) uint_to_hex_slice(int input:u, int uint_byte_length:u8) {
+
+    builder ret = begin_cell();
+    ret = ret.store_slice("0x");
+
+    ;;256 bit -> 32 bytes -> 64 hex char
+    ;;1 byte -> 2 hex char
+    int count:u8 = 0;
+    while (count:u8 < uint_byte_length:u8) {
+
+        int mask = math::pow(256, uint_byte_length:u8 - 1 - count:u8);
+        int number = input:u / mask;
+        input:u = input:u % mask;
+
+        int high:u = number / 16;
+        int low:u = number % 16;
+
+        slice high:slice = @uint_to_slice(high:u);
+        slice low:slice = @uint_to_slice(low:u);
+
+        ret = ret.store_slice(high:slice).store_slice(low:slice);
+
+        count:u8 += 1;
+    }
+
+    slice ttt = ret.end_cell().begin_parse();
+
+    ~strdump("ttt");
+    ~dump(ttt);
+
+    return ttt;
+}

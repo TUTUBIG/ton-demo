@@ -1,0 +1,121 @@
+#include "../imports/stdlib.fc";
+#include "../lib/export.fc";
+#include "../utils/export.fc";
+
+#include "../router/export.fc";
+
+#include "storage1.fc";
+#include "request.fc";
+#include "op.fc";
+#include "getter.fc";
+#include "getter_base.fc";
+#include "deploy1.fc";
+#include "init.fc";
+#include "claim.fc";
+#include "close.fc";
+
+() @init_procedure(
+cell params
+) impure inline_ref {
+
+    (
+        int packet_type:u8,
+        slice token:addr,
+        int amount:u256,
+        slice creater:addr,
+        cell red_packet_init_data:cell
+    ) = red_packet::Init::de(params);
+
+    throw_unless(301, _state:u8 == state::red_packet::initializing);
+    throw_unless(302, _packet_type:u8 == type::red_packet::unknown);
+
+    @init(
+        packet_type:u8,
+        token:addr,
+        amount:u256,
+        creater:addr,
+        red_packet_init_data:cell
+    );
+
+    save_storage();
+}
+
+() @claim_procedure(
+cell params
+) impure inline_ref {
+
+    (
+        slice recipient:addr
+    ) = red_packet::Claim::de(params);
+
+    throw_unless(303, equal_slices(sender:addr, _router:addr));
+    throw_unless(304, _state:u8 == state::red_packet::normal);
+
+    @claim(recipient:addr);
+
+    save_storage();
+
+}
+
+() @close_procedure(
+cell params
+) impure inline_ref {
+
+    _ = red_packet::Close::de(params);
+
+    throw_unless(303, equal_slices(sender:addr, _router:addr));
+    throw_unless(304, _state:u8 == state::red_packet::normal);
+
+    @close();
+
+    save_storage();
+}
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+    if (flags & 1) {
+        ;; ignore all bounced messages
+        return ();
+    }
+    if (in_msg_body.slice_empty?()) {
+        ;;revert all unknown op
+        throw(1013);
+    }
+
+    sender:addr = cs~load_msg_addr();
+
+    int op = in_msg_body~load_uint(32); ;; by convention, the first 32 bits of incoming message is the op
+    query_id:u64 = in_msg_body~load_uint(64); ;; we must have query_id
+    ~strdump("red_packet read op and query_id");
+    ~dump(op);
+    ~dump(query_id:u64);
+    my_balance:coin = my_balance;
+    msg_value:coin = msg_value;
+
+    load_storage();
+    if (op == op::red_packet::init) {
+        ~strdump("op::red_packet::init");
+        @init_procedure(in_msg_body~load_ref());
+        return ();
+    }
+    if (op == op::red_packet::claim) {
+        ~strdump("op::red_packet::claim");
+        @claim_procedure(in_msg_body~load_ref());
+        return ();
+    }
+    if (op == op::red_packet::close) {
+        ~strdump("op::red_packet::close");
+        @close_procedure(in_msg_body~load_ref());
+        return ();
+    }
+    ;;====
+    if (op == op::red_packet::deploy) {
+        ~strdump("op::red_packet::deploy");
+        @deploy_procedure(in_msg_body~load_ref());
+        return ();
+    }
+
+    throw(1012); ;; if the message contains an op that is not known to this contract, we throw
+}

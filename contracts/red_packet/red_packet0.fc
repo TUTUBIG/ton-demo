@@ -1,0 +1,44 @@
+#include "../imports/stdlib.fc";
+#include "../lib/export.fc";
+#include "../utils/export.fc";
+
+#include "storage0.fc";
+#include "request.fc";
+#include "op.fc";
+#include "getter_base.fc";
+#include "deploy0.fc";
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+    if (flags & 1) {
+        ;; ignore all bounced messages
+        return ();
+    }
+    if (in_msg_body.slice_empty?()) {
+        ;;revert all unknown op
+        throw(1013);
+    }
+
+    sender:addr = cs~load_msg_addr();
+
+    int op = in_msg_body~load_uint(32); ;; by convention, the first 32 bits of incoming message is the op
+    query_id:u64 = in_msg_body~load_uint(64); ;; we must have query_id
+    ~strdump("red_packet read op and query_id");
+    ~dump(op);
+    ~dump(query_id:u64);
+    my_balance:coin = my_balance;
+    msg_value:coin = msg_value;
+
+    load_storage();
+    if (op == op::red_packet::deploy) {
+        ~strdump("op::red_packet::deploy");
+        @deploy_procedure(in_msg_body~load_ref());
+        return ();
+    }
+
+    ;;logic 0 has not business logic
+
+    throw(1012); ;; if the message contains an op that is not known to this contract, we throw
+}

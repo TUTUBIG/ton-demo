@@ -1,0 +1,233 @@
+#include "../imports/stdlib.fc";
+#include "../utils/export.fc";
+
+#include "constant.fc";
+
+;;===================================create===========================================
+;;---------------
+const int gas::router::create_finished = 5 * DOTDOT1;
+int gas::router::create_finished::recharge(int my_balance, int msg_value) inline {
+    return calc_reserve_and_storage_gap(my_balance, msg_value, 0, CONTRACT_MAINTENANCE);
+}
+int fee::router::create_finished(int my_balance, int msg_value) inline {
+    int need_fee = gas::router::create_finished ;;cost
+    + gas::router::create_finished::recharge(my_balance, msg_value) ;;keep
+    + REPORT_FEE ;;out
+    + 0 ;;remaining
+    ;
+    throw_unless(545, need_fee <= msg_value);
+    return msg_value - need_fee;
+}
+int fee::router::create_finished::tx_fee() inline {
+    return gas::router::create_finished ;;cost
+    + gas::router::create_finished::recharge(0, 0) ;;keep-max
+    + REPORT_FEE ;;out
+    + MSG_VALUE_SUPPLEMENT
+    ;
+}
+;;---------------
+const int gas::red_packet::init = 1 * DOTDOT1;
+;;计算需要多少用以维持
+;;如果是get方法计算,则用极限情况, balance读取当前值, msg_value为0
+int gas::red_packet::init::recharge(int my_balance, int msg_value) inline {
+    return calc_reserve_and_storage_gap(my_balance, msg_value, 0, CONTRACT_MAINTENANCE);
+}
+;;基本tx需要的费用, 返回多余的费用
+int fee::red_packet::init(int my_balance, int msg_value) inline {
+    int need_fee = gas::red_packet::init ;;cost
+    + gas::red_packet::init::recharge(my_balance, msg_value) ;;keep
+    + fee::router::create_finished::tx_fee() + FORWARD_FEE1 ;;out
+    + 0 ;;remaining
+    ;
+    throw_unless(545, need_fee <= msg_value);
+    return msg_value - need_fee;
+}
+int fee::red_packet::init::tx_fee() inline {
+    return gas::red_packet::init ;;cost
+    + gas::red_packet::init::recharge(0, 0) ;;keep-max
+    + fee::router::create_finished::tx_fee() + FORWARD_FEE1 ;;out
+    + MSG_VALUE_SUPPLEMENT
+    ;
+}
+;;---------------
+const int gas::red_packet::deploy = 5 * DOTDOT1;
+int gas::red_packet::deploy::recharge(int my_balance, int msg_value) inline {
+    return calc_reserve_and_storage_gap(my_balance, msg_value, 0, CONTRACT_MAINTENANCE);
+}
+int fee::red_packet::deploy(int my_balance, int msg_value) inline {
+    int need_fee = gas::red_packet::deploy ;;cost
+    + gas::red_packet::deploy::recharge(my_balance, msg_value) ;;keep
+    + 0 ;;remaining
+    ;
+    throw_unless(545, need_fee <= msg_value);
+    return msg_value - need_fee;
+}
+int fee::red_packet::deploy::tx_fee() inline {
+    return gas::red_packet::deploy ;;cost
+    + gas::red_packet::deploy::recharge(0, 0) ;;keep-max
+    + MSG_VALUE_SUPPLEMENT
+    ;
+}
+;;---------------
+const int gas::router::create = 1 * DOTDOT1;
+int gas::router::create::recharge(int my_balance, int msg_value) inline {
+    return calc_reserve_and_storage_gap(my_balance, msg_value, 0, CONTRACT_MAINTENANCE);
+}
+int fee::router::create(int my_balance, int msg_value) inline {
+    int need_fee = gas::router::create ;;cost
+    + gas::router::create::recharge(my_balance, msg_value) ;;keep
+    + REPORT_FEE ;;out
+    + fee::red_packet::deploy::tx_fee() + FORWARD_FEE1 ;;out
+    + fee::red_packet::init::tx_fee() + FORWARD_FEE1 ;;out
+    + 0 ;;remaining
+    ;
+    throw_unless(545, need_fee <= msg_value);
+    return msg_value - need_fee;
+}
+int fee::router::create::tx_fee() inline {
+    return gas::router::create ;;cost
+    + gas::router::create::recharge(0, 0) ;;keep-max
+    + REPORT_FEE ;;out
+    + fee::red_packet::deploy::tx_fee() + FORWARD_FEE1 ;;out
+    + fee::red_packet::init::tx_fee() + FORWARD_FEE1
+    + MSG_VALUE_SUPPLEMENT
+    ;
+}
+
+;;===================================create===========================================
+;;===================================claim===========================================
+
+const int gas::router::withdraw = 1 * DOTDOT1;
+int gas::router::withdraw::recharge(int my_balance, int msg_value) inline {
+    return calc_reserve_and_storage_gap(my_balance, msg_value, 0, CONTRACT_MAINTENANCE);
+}
+int fee::router::withdraw(int my_balance, int msg_value) inline {
+    int need_fee = gas::router::withdraw ;;cost
+    + gas::router::withdraw::recharge(my_balance, msg_value) ;;keep
+    + REPORT_FEE ;;out
+    + TRANSFER_JETTON_FEE ;;out
+    + 0 ;;remaining
+    ;
+    throw_unless(545, need_fee <= msg_value);
+    return msg_value - need_fee;
+}
+int fee::router::withdraw::tx_fee() inline {
+    return gas::router::withdraw ;;cost
+    + gas::router::withdraw::recharge(0, 0) ;;keep-max
+    + REPORT_FEE ;;out
+    + TRANSFER_JETTON_FEE ;;out
+    + MSG_VALUE_SUPPLEMENT
+    ;
+}
+;;---------------
+const int gas::red_packet::claim = 1 * DOTDOT1;
+int gas::red_packet::claim::recharge(int my_balance, int msg_value) inline {
+    return calc_reserve_and_storage_gap(my_balance, msg_value, 0, CONTRACT_MAINTENANCE);
+}
+int fee::red_packet::claim(int my_balance, int msg_value) inline {
+    int need_fee = gas::red_packet::claim ;;cost
+    + gas::red_packet::claim::recharge(my_balance, msg_value) ;;keep
+    + fee::router::withdraw::tx_fee() + FORWARD_FEE1 ;;out
+    + 0 ;;remaining
+    ;
+    throw_unless(545, need_fee <= msg_value);
+    return msg_value - need_fee;
+}
+int fee::red_packet::claim::tx_fee() inline {
+    return gas::red_packet::claim ;;cost
+    + gas::red_packet::claim::recharge(0, 0) ;;keep-max
+    + fee::router::withdraw::tx_fee() + FORWARD_FEE1
+    + MSG_VALUE_SUPPLEMENT
+    ;
+}
+;;---------------
+const int gas::router::claim = 1 * DOTDOT1;
+int gas::router::claim::recharge(int my_balance, int msg_value) inline {
+    return calc_reserve_and_storage_gap(my_balance, msg_value, 0, CONTRACT_MAINTENANCE);
+}
+int fee::router::claim(int my_balance, int msg_value) inline {
+    int need_fee = gas::router::claim ;;cost
+    + gas::router::claim::recharge(my_balance, msg_value) ;;keep
+    + fee::red_packet::claim::tx_fee() + FORWARD_FEE1 ;;out
+    + 0 ;;remaining
+    ;
+    throw_unless(545, need_fee <= msg_value);
+    return msg_value - need_fee;
+}
+int fee::router::claim::tx_fee() inline {
+    return gas::router::claim ;;cost
+    + gas::router::claim::recharge(0, 0) ;;keep-max
+    + fee::red_packet::claim::tx_fee() + FORWARD_FEE1 ;;out
+    + MSG_VALUE_SUPPLEMENT
+    ;
+}
+
+;;===================================claim===========================================
+;;===================================close===========================================
+
+const int gas::router::refund = 1 * DOTDOT1;
+int gas::router::refund::recharge(int my_balance, int msg_value) inline {
+    return calc_reserve_and_storage_gap(my_balance, msg_value, 0, CONTRACT_MAINTENANCE);
+}
+int fee::router::refund(int my_balance, int msg_value) inline {
+    int need_fee = gas::router::refund ;;cost
+    + gas::router::refund::recharge(my_balance, msg_value) ;;keep
+    + REPORT_FEE ;;out
+    + TRANSFER_JETTON_FEE ;;out
+    + 0 ;;remaining
+    ;
+    throw_unless(545, need_fee <= msg_value);
+    return msg_value - need_fee;
+}
+int fee::router::refund::tx_fee() inline {
+    return gas::router::refund ;;cost
+    + gas::router::refund::recharge(0, 0) ;;keep-max
+    + REPORT_FEE ;;out
+    + TRANSFER_JETTON_FEE ;;out
+    + MSG_VALUE_SUPPLEMENT
+    ;
+}
+;;---------------
+const int gas::red_packet::close = 1 * DOTDOT1;
+int gas::red_packet::close::recharge(int my_balance, int msg_value) inline {
+    return calc_reserve_and_storage_gap(my_balance, msg_value, 0, CONTRACT_MAINTENANCE);
+}
+int fee::red_packet::close(int my_balance, int msg_value) inline {
+    int need_fee = gas::red_packet::close ;;cost
+    + gas::red_packet::close::recharge(my_balance, msg_value) ;;keep
+    + fee::router::refund::tx_fee() + FORWARD_FEE1 ;;out
+    + 0 ;;remaining
+    ;
+    throw_unless(545, need_fee <= msg_value);
+    return msg_value - need_fee;
+}
+int fee::red_packet::close::tx_fee() inline {
+    return gas::red_packet::close ;;cost
+    + gas::red_packet::close::recharge(0, 0) ;;keep-max
+    + fee::router::refund::tx_fee() + FORWARD_FEE1
+    + MSG_VALUE_SUPPLEMENT
+    ;
+}
+;;---------------
+const int gas::router::close = 1 * DOTDOT1;
+int gas::router::close::recharge(int my_balance, int msg_value) inline {
+    return calc_reserve_and_storage_gap(my_balance, msg_value, 0, CONTRACT_MAINTENANCE);
+}
+int fee::router::close(int my_balance, int msg_value) inline {
+    int need_fee = gas::router::close ;;cost
+    + gas::router::close::recharge(my_balance, msg_value) ;;keep
+    + fee::red_packet::close::tx_fee() + FORWARD_FEE1 ;;out
+    + 0 ;;remaining
+    ;
+    throw_unless(545, need_fee <= msg_value);
+    return msg_value - need_fee;
+}
+int fee::router::close::tx_fee() inline {
+    return gas::router::close ;;cost
+    + gas::router::close::recharge(0, 0) ;;keep-max
+    + fee::red_packet::close::tx_fee() + FORWARD_FEE1 ;;out
+    + MSG_VALUE_SUPPLEMENT
+    ;
+}
+
+;;===================================close===========================================

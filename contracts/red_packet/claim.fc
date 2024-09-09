@@ -1,0 +1,160 @@
+#include "../imports/stdlib.fc";
+#include "../lib/export.fc";
+#include "../utils/export.fc";
+
+#include "../router/export.fc";
+
+#include "storage1.fc";
+
+() @claim(
+slice recipient:addr
+) impure inline_ref {
+
+    int value_remaining = fee::red_packet::claim(my_balance:coin, msg_value:coin);
+
+    int claim_amount:u256 = 0;
+    int reclaimedAll:u1 = FALSE:u1;
+    if (_packet_type:u8 == type::red_packet::single) {
+
+        (
+            int total_supply:u256,
+            int remaining_supply:u256
+        ) = @Single_data::de(_packet_data:cell);
+
+        throw_unless(305, total_supply:u256 == remaining_supply:u256);
+
+        claim_amount:u256 = total_supply:u256;
+        remaining_supply:u256 = 0;
+
+        _packet_data:cell = @Single_data::se(
+            total_supply:u256,
+            remaining_supply:u256
+        );
+        _state:u8 = state::red_packet::finished;
+
+        reclaimedAll:u1 = TRUE:u1;
+    }
+    if (_packet_type:u8 == type::red_packet::multiple_fixed) {
+
+        (
+            int total_supply:u256,
+            int remaining_supply:u256,
+            int total_pack:u16,
+            int remaining_pack:u16
+        ) = @Multiple_fix_data::de(_packet_data:cell);
+
+        throw_unless(306, 0 < remaining_supply:u256);
+        throw_unless(307, 0 < remaining_pack:u16);
+
+        claim_amount:u256 = total_supply:u256 / total_pack:u16;
+        remaining_supply:u256 -= claim_amount:u256;
+        remaining_pack:u16 -= 1;
+
+        if (remaining_pack:u16 == 0) {
+            _state:u8 = state::red_packet::finished;
+
+            ;;remainder
+            claim_amount:u256 += remaining_supply:u256;
+            remaining_supply:u256 = 0;
+        }
+
+        _packet_data:cell = @Multiple_fix_data::se(
+            total_supply:u256,
+            remaining_supply:u256,
+            total_pack:u16,
+            remaining_pack:u16
+        );
+
+        if (remaining_pack:u16 == 0) {
+            reclaimedAll:u1 = TRUE:u1;
+        }
+    }
+    if (_packet_type:u8 == type::red_packet::multiple_random) {
+
+        (
+            int total_supply:u256,
+            ;;需要在一开始留出total_pack:u16个coin,保证每人至少分到1个
+            ;;remaining_supply:u256里
+            int remaining_supply:u256,
+            int total_pack:u16,
+            int remaining_pack:u16
+        ) = @Multiple_random_data::de(_packet_data:cell);
+
+        throw_unless(308, 0 < remaining_pack:u16);
+
+        ~strdump("multiple_random remaining_pack:u16");
+        ~dump(remaining_pack:u16);
+
+        if (remaining_pack:u16 == 1) {
+            claim_amount:u256 = remaining_supply:u256;
+        } else {
+            ;;[1, 2*remaining_supply/remaining_pack]
+            int claim_amount_max:u256 = 2 * (remaining_supply:u256 - 1 * remaining_pack:u16) / remaining_pack:u16;
+
+            claim_amount:u256 = rand(claim_amount_max:u256) + 1;
+        }
+        ~strdump("multiple_random claim_amount:u256");
+        ~dump(claim_amount:u256);
+
+        remaining_supply:u256 -= claim_amount:u256;
+        remaining_pack:u16 -= 1;
+
+        if (remaining_pack:u16 == 0) {
+            _state:u8 = state::red_packet::finished;
+        }
+
+
+        ~strdump("multiple_random remaining_pack:u16 after logic");
+        ~dump(remaining_pack:u16);
+
+        _packet_data:cell = @Multiple_random_data::se(
+            total_supply:u256,
+            remaining_supply:u256,
+            total_pack:u16,
+            remaining_pack:u16
+        );
+
+        if (remaining_pack:u16 == 0) {
+            reclaimedAll:u1 = TRUE:u1;
+        }
+    }
+
+    ~strdump("multiple_random _state:u8 after logic");
+    ~dump(_state:u8);
+
+    ;;ask router to send token
+    ifnot (reclaimedAll:u1) {
+        send_message_ref(
+            value_remaining + fee::router::withdraw::tx_fee(),
+            _router:addr,
+            op::router::withdraw,
+            query_id:u64,
+            router::Withdraw::se(
+                _token:addr,
+                claim_amount:u256,
+                recipient:addr,
+                _red_packet_index:u64
+            ),
+            PAID_EXTERNALLY,
+            TRUE:u1,
+            null()
+        );
+    } else {
+        send_message_ref(
+            0,
+            _router:addr,
+            op::router::withdraw,
+            query_id:u64,
+            router::Withdraw::se(
+                _token:addr,
+                claim_amount:u256,
+                recipient:addr,
+                _red_packet_index:u64
+            ),
+            NORMAL | CARRY_ALL_BALANCE,
+            TRUE:u1,
+            null()
+        );
+    }
+    return ();
+}

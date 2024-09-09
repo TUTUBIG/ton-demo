@@ -1,0 +1,165 @@
+#include "../imports/stdlib.fc";
+#include "../lib/export.fc";
+
+#include "op.fc";
+
+const int router::storage_version = 1;
+
+global int _code_manager_public_key:u256;
+global int _storage_version:u8;
+global int _code_version:u8;
+;;===========================data cell===========================
+global int _ctx:u8;
+global slice _router_admin:addr;
+;;--
+global int _state:u8;
+global int _next_red_packet_index:u64;
+global slice _reporter:addr;
+
+global cell _red_packet_base_code:cell;
+global cell _red_packet_deployment:cell;
+
+global slice _server0:addr;
+global slice _server1:addr;
+global slice _server2:addr;
+
+;;================temp===================
+global slice sender:addr;
+global int query_id:u64;
+global int my_balance:coin;
+global int msg_value:coin;
+
+;;=========================================================================
+
+(cell, ()) storage_version_0->1?(cell data:cell) impure inline {
+
+    if (_storage_version:u8 == 0) {
+
+        ~strdump("router storage1 storage_version_0->1");
+
+        ;;update to data_version 1
+        _storage_version:u8 = 1;
+
+
+        ;;transfer data:cell of version 0 to that of version 1
+
+        {
+            slice data:slice = data:cell.begin_parse();
+            _ctx:u8 = data:slice~load_uint(8);
+            _router_admin:addr = data:slice~load_msg_addr();
+
+            data:slice.end_parse();
+        }
+
+        ;;version 2's data cell
+
+        cell empty:cell = begin_cell().end_cell();
+
+        return (
+            begin_cell()
+                .store_uint(_ctx:u8, 8)
+                .store_slice(_router_admin:addr)
+                .store_uint(state::router::initializing, 8) ;;_state:u8
+                .store_uint(0, 64) ;;_next_red_packet_index:u64
+                .store_slice(address_zero) ;;_reporter:add
+                .store_ref(empty:cell) ;;_red_packet_base_code:cell
+                .store_ref(empty:cell) ;;_red_packet_deployment:cell
+                .store_ref(
+                    begin_cell()
+                        .store_slice(address_zero);;server0
+                        .store_slice(address_zero);;server1
+                        .store_slice(address_zero);;server2
+                        .end_cell()
+                )
+                .end_cell(),
+            ()
+        );
+    }
+    ;;else, keep the storage
+
+    return (data:cell, ());
+}
+
+(cell, ()) upgrade_storage_version(cell data:cell) impure {
+
+    data:cell~storage_version_0->1?();
+
+    return (data:cell, ());
+}
+
+;;=========================================================================
+
+
+() load_storage() impure inline_ref {
+
+    slice root:slice = get_data().begin_parse();
+    _code_manager_public_key:u256 = root:slice~load_uint(256);
+    _storage_version:u8 = root:slice~load_uint(8);
+    _code_version:u8 = root:slice~load_uint(8);
+
+    ;;===========================
+
+    cell data:cell = root:slice~load_ref();
+    root:slice.end_parse();
+
+    ;;update to latest data version
+    data:cell~upgrade_storage_version();
+
+    slice data:slice = data:cell.begin_parse();
+
+    _ctx:u8 = data:slice~load_uint(8);
+    _router_admin:addr = data:slice~load_msg_addr();
+    _state:u8 = data:slice~load_uint(8);
+    _next_red_packet_index:u64 = data:slice~load_uint(64);
+    _reporter:addr = data:slice~load_msg_addr();
+
+    _red_packet_base_code:cell = data:slice~load_ref();
+    _red_packet_deployment:cell = data:slice~load_ref();
+
+    cell data_sub3:cell = data:slice~load_ref();
+    {
+        slice data_sub3:slice = data_sub3:cell.begin_parse();
+
+        _server0:addr = data_sub3:slice~load_msg_addr();
+        _server1:addr = data_sub3:slice~load_msg_addr();
+        _server2:addr = data_sub3:slice~load_msg_addr();
+
+        data_sub3:slice.end_parse();
+    }
+
+    data:slice.end_parse();
+
+    throw_unless(3445, _storage_version:u8 == router::storage_version);
+}
+
+
+() save_storage() impure inline_ref {
+
+    set_data(
+        begin_cell()
+            .store_uint(_code_manager_public_key:u256, 256)
+            .store_uint(_storage_version:u8, 8)
+            .store_uint(_code_version:u8, 8)
+        ;;====data:cell
+            .store_ref(
+                begin_cell()
+                    .store_uint(_ctx:u8, 8)
+                    .store_slice(_router_admin:addr)
+                    .store_uint(_state:u8, 8)
+                    .store_uint(_next_red_packet_index:u64, 64)
+                    .store_slice(_reporter:addr)
+                    .store_ref(_red_packet_base_code:cell)
+                    .store_ref(_red_packet_deployment:cell)
+                    .store_ref(
+                        begin_cell()
+                            .store_slice(_server0:addr)
+                            .store_slice(_server1:addr)
+                            .store_slice(_server2:addr)
+                            .end_cell()
+                    )
+                    .end_cell()
+            )
+            .end_cell()
+    );
+    return ();
+}

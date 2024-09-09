@@ -1,0 +1,17 @@
+const int op::red_packet::deploy = "op::red_packet::deploy"c; ;;3390a3fa 865117178
+const int op::red_packet::init = "op::red_packet::init"c; ;;a450edff 2756767231
+
+const int op::red_packet::claim = "op::red_packet::claim"c; ;;dd61a086 3714162822
+
+const int op::red_packet::close = "op::red_packet::close"c; ;;6909ff65 1762262885
+
+const int state::red_packet::initializing = 0;
+const int state::red_packet::normal = 1;
+const int state::red_packet::finished = 2;
+const int state::red_packet::refund = 3;
+
+const int type::red_packet::unknown = 0;
+const int type::red_packet::single = 1;
+const int type::red_packet::multiple_fixed = 2;
+const int type::red_packet::multiple_random = 3;
+

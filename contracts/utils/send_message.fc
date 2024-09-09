@@ -1,0 +1,146 @@
+#include "../imports/stdlib.fc";
+#include "../imports/ft/op.fc";
+
+const NORMAL = 0;
+const PAID_EXTERNALLY = 1;
+const IGNORE_ERRORS = 2;
+
+const DESTROY_IF_ZERO = 32;
+const CARRY_REMAINING_GAS = 64;
+const CARRY_ALL_BALANCE = 128;
+
+() send_message_empty(int value, slice to, int mode, int bounce?) impure inline_ref {
+    cell msg = begin_cell()
+        .store_uint(bounce? == 1 ? 0x18 : 0x10, 6)
+        .store_slice(to)
+        .store_coins(value)
+        .store_uint(0, 1 + 4 + 4 + 64 + 32)
+        .store_uint(0 + 0, 1 + 1)
+        .end_cell();
+    send_raw_message(msg, mode);
+}
+
+() send_message_ref(int value, slice to, int op, int query_id, cell ref_payload, int mode, int bounce?, cell state_init) impure inline_ref {
+
+    builder msg:b = begin_cell()
+        .store_uint(bounce? == 1 ? 0x18 : 0x10, 6)
+        .store_slice(to)
+        .store_coins(value)
+        .store_uint(0, 1 + 4 + 4 + 64 + 32);
+
+    {
+        ;;state
+        int cell_null_flag = cell_null?(state_init);
+        if (cell_null_flag == 0) {
+            msg:b = msg:b
+                .store_uint(2 + 1, 1 + 1)
+                .store_ref(state_init);
+        }
+        if (cell_null_flag == -1) {
+            msg:b = msg:b
+                .store_uint(0, 1);
+        }
+    }
+
+    ;;^body
+    msg:b = msg:b
+        .store_uint(1, 1);
+
+
+    builder body:b = begin_cell()
+        .store_uint(op, 32);
+
+    if (query_id != -1) {
+        body:b = body:b
+            .store_uint(query_id, 64);
+    }
+    ifnot (cell_null?(ref_payload)) {
+        body:b = body:b
+            .store_ref(ref_payload);
+    }
+    cell body:cell = body:b
+        .end_cell();
+
+    cell msg:cell = msg:b
+        .store_ref(body:cell)
+        .end_cell();
+
+    send_raw_message(msg:cell, mode);
+}
+
+
+() send_message_inplace(int value, slice to, int op, int query_id, builder builder_payload, int mode, int bounce?, cell state_init) impure inline_ref {
+
+    builder msg:b = begin_cell()
+        .store_uint(bounce? == 1 ? 0x18 : 0x10, 6)
+        .store_slice(to)
+        .store_coins(value)
+        .store_uint(0, 1 + 4 + 4 + 64 + 32);
+
+    int cell_null_flag = cell_null?(state_init);
+    if (cell_null_flag == 0) {
+        msg:b = msg:b
+            .store_uint(2 + 1, 1 + 1)
+            .store_ref(state_init);
+    }
+    if (cell_null_flag == -1) {
+        msg:b = msg:b
+            .store_uint(0, 1);
+    }
+
+    msg:b = msg:b
+        .store_uint(0, 1) ;;inplace
+        .store_uint(op, 32);
+
+    if (query_id != -1) {
+        msg:b = msg:b
+            .store_uint(query_id, 64);
+    }
+
+    cell msg:cell = msg:b
+        .store_builder(builder_payload)
+        .end_cell();
+
+    send_raw_message(msg:cell, mode);
+}
+
+() send_ton_if_neccesary(int ton_to_send, slice to_whom) impure inline_ref {
+    ;;0.01 <= ton_to_send
+    if (10000000 <= ton_to_send) {
+        send_message_empty(ton_to_send, to_whom, PAID_EXTERNALLY, 0);
+    }
+}
+
+() send_jetton(
+int query_id:u64,
+slice to_wallet:addr,
+slice ton_receiver:addr,
+int jetton_amount_to_send:coin,
+slice self_jetton_wallet:addr,
+int ton_to_send:coin,
+cell forward_payload?:cell
+) impure inline_ref {
+
+    send_raw_message(
+        begin_cell()
+            .store_uint(0x18, 6)
+            .store_slice(self_jetton_wallet:addr)
+            .store_coins(ton_to_send:coin)
+            .store_uint(0, 1 + 4 + 4 + 64 + 32)
+            .store_uint(1, 1 + 1);;no state, body separate
+            .store_ref(
+                begin_cell()
+                    .store_uint(op::transfer(), 32)
+                    .store_uint(query_id:u64, 64)
+                    .store_coins(jetton_amount_to_send:coin) ;;transfer jetton amount
+                    .store_slice(to_wallet:addr) ;;to address, sender's wallet address
+                    .store_slice(ton_receiver:addr) ;;responseAddress
+                    .store_maybe_ref(null()) ;;customPayload
+                    .store_coins(0) ;;forward_ton_amount
+                    .store_maybe_ref(forward_payload?:cell) ;;forwardPayload
+                    .end_cell()
+            )
+            .end_cell(),
+        NORMAL
+    ); ;;
+}

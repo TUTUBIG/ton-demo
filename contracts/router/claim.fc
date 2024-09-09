@@ -1,0 +1,38 @@
+#include "../imports/stdlib.fc";
+#include "../lib/export.fc";
+#include "../utils/export.fc";
+
+#include "../red_packet/export.fc";
+
+#include "storage1.fc";
+#include "report.fc";
+
+() @claim(
+slice recipient:addr,
+int red_packet_index:u64
+) impure inline_ref {
+
+    int value_remaining = fee::router::claim(my_balance:coin, msg_value:coin);
+
+    slice red_packet_address = calculate_address(red_packet::state_init(
+        _red_packet_base_code:cell,
+        _code_manager_public_key:u256,
+        my_address(),
+        red_packet_index:u64
+    ));
+
+    send_message_ref(
+        value_remaining + fee::red_packet::claim::tx_fee(),
+        red_packet_address,
+        op::red_packet::claim,
+        query_id:u64,
+        red_packet::Claim::se(
+            recipient:addr
+        ),
+        PAID_EXTERNALLY,
+        TRUE:u1,
+        null()
+    );
+
+    return ();
+}

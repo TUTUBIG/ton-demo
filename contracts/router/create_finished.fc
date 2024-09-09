@@ -1,0 +1,39 @@
+#include "../imports/stdlib.fc";
+#include "../lib/export.fc";
+#include "../utils/export.fc";
+
+#include "../red_packet/export.fc";
+
+#include "storage1.fc";
+#include "report.fc";
+
+() @create_finished(
+int packet_type:u8,
+slice token:addr,
+int amount:u256,
+cell red_packet_data:cell
+) impure inline_ref {
+
+    int value_remaining = fee::router::create_finished(my_balance:coin, msg_value:coin);
+
+    ;;return additional ton
+    ;; send_ton_if_neccesary();
+
+    send_message_ref(
+        value_remaining + REPORT_FEE,
+        _reporter:addr,
+        op::report::report_create,
+        query_id:u64,
+        router::Report_create::se(
+            packet_type:u8,
+            token:addr,
+            amount:u256,
+            red_packet_data:cell
+        ),
+        NORMAL,
+        FALSE:u1,
+        null()
+    );
+
+    return ();
+}

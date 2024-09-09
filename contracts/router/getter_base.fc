@@ -1,0 +1,24 @@
+#include "../imports/stdlib.fc";
+#include "../lib/export.fc";
+
+(
+    int, int, int, int,
+    slice
+) get_base() method_id {
+
+    slice root:slice = get_data().begin_parse();
+    int code_manager_public_key:u256 = root:slice~load_uint(256);
+    int storage_version:u8 = root:slice~load_uint(8);
+    int code_version:u8 = root:slice~load_uint(8);
+
+    cell data:cell = root:slice~load_ref();
+    slice data:slice = data:cell.begin_parse();
+
+    int ctx:u8 = data:slice~load_uint(8);
+    slice router_admin:addr = data:slice~load_msg_addr();
+
+    return (
+        code_manager_public_key:u256, storage_version:u8, code_version:u8, ctx:u8,
+        router_admin:addr
+    );
+}

@@ -1,0 +1,29 @@
+#include "../imports/stdlib.fc";
+#include "../lib/export.fc";
+#include "../utils/export.fc";
+
+#include "storage1.fc";
+
+() @deploy_procedure(
+cell params:cell
+) impure inline_ref {
+
+    slice params:slice = params:cell.begin_parse();
+    cell deployment:cell = params:slice~load_ref();
+
+    (int check_result, int code_version:u8, cell code:cell) = deployment::check_deployment(deployment:cell, _code_manager_public_key:u256);
+    throw_unless(134, check_result == 1);
+
+    throw_unless(111, _storage_version:u8 == 0);
+
+    if (code_version:u8 <= _code_version:u8) {
+        return ();
+    }
+
+    set_code(code:cell);
+
+    _code_version:u8 = code_version:u8;
+
+    save_storage();
+    return ();
+}

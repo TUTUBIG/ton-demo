@@ -1,0 +1,69 @@
+#include "../imports/stdlib.fc";
+
+#include "op.fc";
+
+const int router::storage_version = 0;
+
+global int _code_manager_public_key:u256;
+global int _storage_version:u8; ;;0
+global int _code_version:u8; ;;0
+
+global int _ctx:u8;
+global slice _router_admin:addr;
+
+;;-----------_code_and_content:cell---------
+
+global slice sender:addr;
+global int query_id:u64;
+global int my_balance:coin;
+global int msg_value:coin;
+
+
+(cell, ()) upgrade_storage_version(cell data:cell) impure {
+
+    return (data:cell, ());
+}
+
+
+() load_storage() impure inline_ref {
+
+    slice root:slice = get_data().begin_parse();
+    _code_manager_public_key:u256 = root:slice~load_uint(256);
+    _storage_version:u8 = root:slice~load_uint(8);
+    _code_version:u8 = root:slice~load_uint(8);
+
+    cell data:cell = root:slice~load_ref();
+    root:slice.end_parse();
+
+    ;;update to latest data version
+    data:cell~upgrade_storage_version();
+
+    slice data:slice = data:cell.begin_parse();
+    _ctx:u8 = data:slice~load_uint(8);
+    _router_admin:addr = data:slice~load_msg_addr();
+
+    data:slice.end_parse();
+
+    throw_unless(3445, _storage_version:u8 == router::storage_version);
+}
+
+
+() save_storage() impure inline_ref {
+
+    set_data(
+        begin_cell()
+            .store_uint(_code_manager_public_key:u256, 256)
+            .store_uint(_storage_version:u8, 8)
+            .store_uint(_code_version:u8, 8)
+            .store_ref(
+                begin_cell()
+                    .store_uint(_ctx:u8, 8)
+                    .store_slice(_router_admin:addr)
+                    .end_cell()
+            )
+            .end_cell()
+    );
+    return ();
+}
+
+;;=========================================================================

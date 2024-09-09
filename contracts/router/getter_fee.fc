@@ -1,0 +1,14 @@
+#include "../imports/stdlib.fc";
+#include "../lib/export.fc";
+
+(int) get_router_create_tx_fee() method_id {
+    return fee::router::create::tx_fee();
+}
+
+(int) get_router_claim_tx_fee() method_id {
+    return fee::router::claim::tx_fee();
+}
+
+(int) get_router_close_tx_fee() method_id {
+    return fee::router::close::tx_fee();
+}

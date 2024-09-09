@@ -1,0 +1,43 @@
+#include "op.fc";
+#include "../imports/stdlib.fc";
+#include "../lib/export.fc";
+#include "../utils/export.fc";
+
+#include "storage1.fc";
+#include "report.fc";
+
+() @withdraw(
+slice token:addr,
+int amount:u256,
+slice recipient:addr,
+int red_packet_index:u64
+) impure inline_ref {
+
+    int value_remaining = fee::router::withdraw(my_balance:coin, msg_value:coin);
+
+    send_jetton(
+        query_id:u64,
+        recipient:addr,
+        _server0:addr, ;;just return excess ton to server0
+        amount:u256,
+        token:addr,
+        TRANSFER_JETTON_FEE + value_remaining,
+        null()
+    );
+
+    send_message_ref(
+        REPORT_FEE,
+        _reporter:addr,
+        op::report::report_withdraw,
+        query_id:u64,
+        router::Report_withdraw::se(
+            token:addr,
+            amount:u256,
+            recipient:addr,
+            red_packet_index:u64
+        ),
+        NORMAL,
+        FALSE:u1,
+        null()
+    );
+}

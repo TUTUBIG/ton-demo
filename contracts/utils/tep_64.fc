@@ -1,0 +1,27 @@
+#include "../imports/stdlib.fc";
+
+const int CELL_MAX_SIZE_BYTES = 126; ;;Math.floor((1023 - 8) / 8);
+const int SNAKE_PREFIX = 0;
+
+(cell) prepareTep64Online(cell key_value:dict) {
+
+    builder ret = begin_cell();
+    ;;0x00 for online
+    return ret.store_int(0, 8).store_dict(key_value:dict).end_cell();
+}
+
+(cell, ()) encodeTepEntry(cell input:dict, slice key:slice, slice value:slice) {
+    if (dict_empty?(input:dict)) {
+        input:dict = new_dict();
+    }
+
+    throw_unless(485, (value:slice.slice_bits() % 8) == 0);
+    throw_unless(486, (value:slice.slice_bits() / 8) <= CELL_MAX_SIZE_BYTES);
+
+    int key_hash:u256 = string_hash(key:slice);
+    cell value:cell = begin_cell().store_uint(SNAKE_PREFIX, 8).store_slice(value:slice).end_cell();
+
+    input:dict~udict_set_ref(256, key_hash:u256, value:cell);
+
+    return (input:dict, ());
+}

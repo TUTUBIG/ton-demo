@@ -1,0 +1,13 @@
+创建红包
+Jetton Wallet ----> Router      op::router::create(router::Create)       transfer_notification
+Router ----> RedPacket          op::red_packet::deploy()
+Router ----> RedPacket          op::red_packet::init(red_packet::Init)
+RedPacket ----> Router          op::router::create_finished()
+Router -----> Reporter          op::report::report_create
+
+领红包
+User Wallet ----> Router        op::router::claim(router::Claim)
+Router ----> RedPacket          op::red_packet::claim(red_packet::Claim)
+RedPacket ----> Router          op::router::withdraw(router::Withdraw)
+Router ----> Jetton Wallet      op::jetton::transfer
+Router ----> Reporter           op::report::report_claim

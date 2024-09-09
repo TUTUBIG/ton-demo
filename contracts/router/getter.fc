@@ -1,0 +1,29 @@
+#include "../imports/stdlib.fc";
+#include "../lib/export.fc";
+
+#include "../red_packet/export.fc";
+
+#include "storage1.fc";
+
+(
+    int, slice, int, int,
+    slice, cell, cell, slice,
+    slice, slice
+) get_storage() method_id {
+    load_storage();
+    return (
+        _ctx:u8, _router_admin:addr, _state:u8, _next_red_packet_index:u64,
+        _reporter:addr, _red_packet_base_code:cell, _red_packet_deployment:cell, _server0:addr,
+        _server1:addr, _server2:addr
+    );
+}
+
+(slice) get_red_packet(int red_packet_index:u64) method_id {
+    load_storage();
+    return calculate_address(red_packet::state_init(
+        _red_packet_base_code:cell,
+        _code_manager_public_key:u256,
+        my_address(),
+        red_packet_index:u64
+    ));
+}

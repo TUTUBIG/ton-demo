@@ -1,0 +1,24 @@
+const int const::UINT256_MAX = 115792089237316195423570985008687907853269984665640564039457584007913129639935; ;; 2 << 256 -1
+const int const::UINT160_MAX =  2 << 160 - 1; ;; 2 << 160 -1
+const int const::UINT128_MAX = 2 << 128 - 1; ;; 2 << 128 -1
+
+const int const::1e6 = 1000000;
+
+const slice address_zero = "EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c"a;
+
+const int ONE = 1000000000; ;;1
+const int DOT1 = 100000000; ;;0.1
+const int DOTDOT1 = 10000000; ;;0.01
+const int DOTDOTDOT1 = 1000000; ;;0.001
+
+const int CONTRACT_MAINTENANCE = DOTDOT1; ;;0.01
+const int REPORT_FEE = 2 * DOTDOT1; ;;0.02
+const int TRANSFER_JETTON_FEE = 7 * DOTDOT1; ;;0.07
+
+const int FORWARD_FEE1 = 1 * DOTDOT1; ;;0.01
+const int FORWARD_FEE2 = 2 * DOTDOT1; ;;0.02
+const int FORWARD_FEE3 = 3 * DOTDOT1; ;;0.03
+const int FORWARD_FEE4 = 4 * DOTDOT1; ;;0.04
+const int FORWARD_FEE5 = 5 * DOTDOT1; ;;0.05
+
+const int MSG_VALUE_SUPPLEMENT = 1 * DOTDOTDOT1;

@@ -1,0 +1,342 @@
+#include "../imports/stdlib.fc";
+#include "../lib/export.fc";
+#include "../utils/export.fc";
+
+#include "../red_packet/export.fc";
+
+#include "storage1.fc";
+#include "request.fc";
+#include "op.fc";
+#include "getter_fee.fc";
+;; #include "getter_nft.fc";
+#include "getter_base.fc";
+#include "getter.fc";
+#include "deploy1.fc";
+#include "create.fc";
+#include "create_finished.fc";
+#include "withdraw.fc";
+#include "claim.fc";
+#include "close.fc";
+#include "refund.fc";
+
+() @init_procedure(
+cell params
+) impure inline_ref {
+
+    throw_unless(201, _state:u8 == state::router::initializing);
+    throw_unless(202, equal_slices(sender:addr, _router_admin:addr));
+
+    _state:u8 = state::router::normal;
+
+    _next_red_packet_index:u64 = 0;
+
+    (
+        _reporter:addr,
+        _red_packet_base_code:cell,
+        _red_packet_deployment:cell,
+        _server0:addr,
+        _server1:addr,
+        _server2:addr
+    ) = router::Init::de(params);
+
+    save_storage();
+}
+
+() @create_procedure(
+cell params,
+int jetton_amount:u256,
+slice from_wallet:addr
+) impure inline_ref {
+
+    (
+        int packet_type:u8,
+        cell red_packet::Init:cell
+    ) = router::Create::de(params);
+
+    @create(
+        packet_type:u8,
+        jetton_amount:u256,
+        sender:addr, ;;jetton wallet of router
+        from_wallet:addr,
+        red_packet::Init:cell
+    );
+
+    save_storage();
+    return ();
+}
+
+
+() @create_finished_procedure(
+cell params
+) impure inline_ref {
+
+    (
+        int packet_type:u8,
+        slice token:addr,
+        int amount:u256,
+        cell red_packet_data:cell
+    ) = router::Create_finished::de(params);
+
+    @create_finished(
+        packet_type:u8,
+        token:addr,
+        amount:u256,
+        red_packet_data:cell
+    );
+
+    save_storage();
+    return ();
+}
+
+() @claim_procedure(
+cell params
+) impure inline_ref {
+
+    (
+        slice recipient:addr,
+        int red_packet_index:u64
+    ) = router::Claim::de(params);
+
+    ;;check if it is the server
+    throw_unless(203,
+        equal_slices(
+            sender:addr,
+            _server0:addr
+        ) |
+        equal_slices(
+            sender:addr,
+            _server1:addr
+        ) |
+        equal_slices(
+            sender:addr,
+            _server2:addr
+        )
+    );
+
+    @claim(
+        recipient:addr,
+        red_packet_index:u64
+    );
+
+    save_storage();
+    return ();
+}
+
+() @withdraw_procedure(
+cell params
+) impure inline_ref {
+
+    (
+        slice token:addr,
+        int amount:u256,
+        slice recipient:addr,
+        int red_packet_index:u64
+    ) = router::Withdraw::de(params);
+
+    throw_unless(204,
+        equal_slices(
+            sender:addr,
+            calculate_address(red_packet::state_init(
+                _red_packet_base_code:cell,
+                _code_manager_public_key:u256,
+                my_address(),
+                red_packet_index:u64
+            ))
+        )
+    );
+
+    @withdraw(
+        token:addr,
+        amount:u256,
+        recipient:addr,
+        red_packet_index:u64
+    );
+
+    save_storage();
+    return ();
+}
+
+() @close_procedure(
+cell params
+) impure inline_ref {
+
+    (
+        int red_packet_index:u64
+    ) = router::Close::de(params);
+
+    ;;check if it is the server
+    throw_unless(205,
+        equal_slices(
+            sender:addr,
+            _server0:addr
+        ) |
+        equal_slices(
+            sender:addr,
+            _server1:addr
+        ) |
+        equal_slices(
+            sender:addr,
+            _server2:addr
+        )
+    );
+
+    @close(
+        red_packet_index:u64
+    );
+
+    save_storage();
+    return ();
+}
+
+
+() @refund_procedure(
+cell params
+) impure inline_ref {
+
+    (
+        slice token:addr,
+        int amount:u256,
+        slice recipient:addr,
+        int red_packet_index:u64
+    ) = router::Refund::de(params);
+
+    throw_unless(204,
+        equal_slices(
+            sender:addr,
+            calculate_address(red_packet::state_init(
+                _red_packet_base_code:cell,
+                _code_manager_public_key:u256,
+                my_address(),
+                red_packet_index:u64
+            ))
+        )
+    );
+
+    @refund(
+        token:addr,
+        amount:u256,
+        recipient:addr,
+        red_packet_index:u64
+    );
+
+    save_storage();
+    return ();
+}
+
+() @transfer_notification(slice in_msg_body) impure {
+
+    ;;amount:(VarUInteger 16)
+    ;;sender:MsgAddress
+    ;;forward_payload:(Either Cell ^Cell)
+
+    int jetton_amount:u256 = in_msg_body~load_coins();
+    slice from_wallet:addr = in_msg_body~load_msg_addr();
+
+    int forward_payload_either:u1 = in_msg_body~load_uint(1);
+
+    slice forward_payload:slice = begin_cell().end_cell().begin_parse();
+    if (forward_payload_either:u1 == 0) {
+        forward_payload:slice = in_msg_body;
+    } else {
+        forward_payload:slice = in_msg_body~load_ref().begin_parse();
+    }
+
+    ;;processing forward payload
+    if (forward_payload:slice.slice_bits() < 32) {
+        ;;notification without any data, should send back;
+        ;;todo
+        return ();
+    }
+
+    int forward_payload_op:u32 = forward_payload:slice~load_uint(32);
+    int forward_payload_query_id:u64 = forward_payload:slice~load_uint(64);
+
+    ~strdump("notification read op");
+    ~dump(forward_payload_op:u32);
+
+    if (forward_payload_query_id:u64 == 0) {
+        forward_payload_query_id:u64 = query_id:u64;
+    }
+
+    ;;either_forward_payload should be sell or init_buy
+    if (forward_payload_op:u32 == op::router::create) {
+        ~strdump("op::router::create");
+        @create_procedure(
+            forward_payload:slice~load_ref(),
+            jetton_amount:u256,
+            from_wallet:addr
+        );
+        return ();
+    }
+    ;;if no valid op, ignore, let client ask service to refund fund
+}
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+    if (flags & 1) {
+        ;; ignore all bounced messages
+        return ();
+    }
+    if (in_msg_body.slice_empty?()) {
+        ;;revert all unknown op
+        throw(1010);
+    }
+
+    sender:addr = cs~load_msg_addr();
+
+    int op = in_msg_body~load_uint(32); ;; by convention, the first 32 bits of incoming message is the op
+    query_id:u64 = in_msg_body~load_uint(64); ;; we must have query_id
+    ~strdump("router read op and query_id");
+    ~dump(op);
+    ~dump(query_id:u64);
+    my_balance:coin = my_balance;
+    msg_value:coin = msg_value;
+
+    load_storage();
+    if (op == op::router::init) {
+        ~strdump("op::router::init");
+        @init_procedure(in_msg_body~load_ref());
+        return ();
+    }
+    if (op == op::router::claim) {
+        ~strdump("op::router::claim");
+        @claim_procedure(in_msg_body~load_ref());
+        return ();
+    }
+    if (op == op::router::withdraw) {
+        ~strdump("op::router::withdraw");
+        @withdraw_procedure(in_msg_body~load_ref());
+        return ();
+    }
+    if (op == op::router::close) {
+        ~strdump("op::router::close");
+        @close_procedure(in_msg_body~load_ref());
+        return ();
+    }
+    if (op == op::router::refund) {
+        ~strdump("op::router::refund");
+        @refund_procedure(in_msg_body~load_ref());
+        return ();
+    }
+    if (op == op::router::create_finished) {
+        ~strdump("op::router::create_finished");
+        @create_finished_procedure(in_msg_body~load_ref());
+        return ();
+    }
+    if (op == op::transfer_notification()) {
+        ~strdump("op::transfer_notification");
+        ;;op::router::create
+        @transfer_notification(in_msg_body);
+        return ();
+    }
+    ;;====
+    if (op == op::router::deploy) {
+        ~strdump("op::router::deploy");
+        @deploy_procedure(in_msg_body~load_ref());
+        return ();
+    }
+
+    throw(1007); ;; if the message contains an op that is not known to this contract, we throw
+}
