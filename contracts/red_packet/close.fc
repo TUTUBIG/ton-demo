@@ -6,8 +6,7 @@
 
 #include "storage1.fc";
 
-() @close()
-impure inline_ref {
+() @close() impure inline_ref {
 
     int value_remaining = fee::red_packet::close(my_balance:coin, msg_value:coin);
 

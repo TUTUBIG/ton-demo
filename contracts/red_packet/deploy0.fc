@@ -4,9 +4,7 @@
 
 #include "storage0.fc";
 
-() @deploy_procedure(
-cell params:cell
-) impure inline_ref {
+() @deploy_procedure(cell params:cell) impure inline_ref {
 
     slice params:slice = params:cell.begin_parse();
     cell deployment:cell = params:slice~load_ref();

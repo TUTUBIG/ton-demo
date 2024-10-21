@@ -14,17 +14,9 @@
 #include "claim.fc";
 #include "close.fc";
 
-() @init_procedure(
-cell params
-) impure inline_ref {
+() @init_procedure(cell params) impure inline_ref {
 
-    (
-        int packet_type:u8,
-        slice token:addr,
-        int amount:u256,
-        slice creater:addr,
-        cell red_packet_init_data:cell
-    ) = red_packet::Init::de(params);
+    ( int packet_type:u8, slice token:addr, int amount:u256, slice creater:addr, cell red_packet_init_data:cell ) = red_packet::Init::de(params);
 
     throw_unless(301, _state:u8 == state::red_packet::initializing);
     throw_unless(302, _packet_type:u8 == type::red_packet::unknown);
@@ -40,9 +32,7 @@ cell params
     save_storage();
 }
 
-() @claim_procedure(
-cell params
-) impure inline_ref {
+() @claim_procedure(cell params) impure inline_ref {
 
     (
         slice recipient:addr
@@ -57,9 +47,7 @@ cell params
 
 }
 
-() @close_procedure(
-cell params
-) impure inline_ref {
+() @close_procedure(cell params) impure inline_ref {
 
     _ = red_packet::Close::de(params);
 

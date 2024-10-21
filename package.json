@@ -8,7 +8,15 @@
 
         "deploy:router:testnet": "dotenv -e testnet.deployer.env -- blueprint run deployRouter --testnet --tonviewer --mnemonic",
 
-        "test:Router": "jest tests/Router.spec.ts"
+        "test:Router": "jest tests/Router.spec.ts",
+
+        "test:create:single": "blueprint run create_packet",
+        "test:get:single": "blueprint run get_packet",
+        "test:claim:single": "blueprint run claim_packet",
+
+
+        "test:jton:balance": "blueprint run get_wTon",
+        "test:jton:mint": "blueprint run mint_wTon"
     },
     "devDependencies": {
         "@ton/blueprint": "^0.22.0",

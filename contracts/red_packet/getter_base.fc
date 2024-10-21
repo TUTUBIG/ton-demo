@@ -1,10 +1,7 @@
 #include "../imports/stdlib.fc";
 #include "../lib/export.fc";
 
-(
-    int, int, int, slice,
-    int
-) get_base() method_id {
+(int, int, int, slice, int) get_base() method_id {
 
 
     slice root:slice = get_data().begin_parse();

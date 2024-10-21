@@ -6,9 +6,7 @@
 
 #include "storage1.fc";
 
-() @claim(
-slice recipient:addr
-) impure inline_ref {
+() @claim(slice recipient:addr) impure inline_ref {
 
     int value_remaining = fee::red_packet::claim(my_balance:coin, msg_value:coin);
 

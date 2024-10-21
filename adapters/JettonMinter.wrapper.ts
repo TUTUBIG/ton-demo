@@ -32,6 +32,68 @@ export class JettonMinterWrapper implements Contract {
         return new JettonMinterWrapper(address);
     }
 
+    static createJettonMinterContentCell() {
+        const contentCell = beginCell();
+
+        // Writing Jetton content into the cell (metadata)
+        contentCell.storeUint(0x00, 8);  // Set a prefix (used for basic content serialization)
+
+        // Storing Jetton metadata (example for name, symbol, description, etc.)
+        contentCell.storeRef(beginCell()
+            .storeUint(0, 8)  // Text field (0 indicates it's a simple text)
+            .storeStringTail("AlvinJetton")  // Token name
+            .endCell());
+
+        contentCell.storeRef(beginCell()
+            .storeUint(0, 8)  // Text field
+            .storeStringTail("AlvinJT")  // Token symbol
+            .endCell());
+
+        contentCell.storeRef(beginCell()
+            .storeUint(0, 8)  // Text field
+            .storeStringTail("alvin demo Jetton token.")  // Token description
+            .endCell());
+
+        // Optionally, add other metadata such as image, URL, or decimals.
+        contentCell.storeRef(beginCell()
+            .storeUint(0, 8)  // Text field
+            .storeStringTail("https://tomo-chains-photo.s3.us-west-1.amazonaws.com/op.svg")  // Token image URL
+            .endCell());
+
+        return contentCell.endCell();  // Complete the cell creation and return it
+    }
+
+    static createWTonMinterContentCell() {
+        const contentCell = beginCell();
+
+        // Writing Jetton content into the cell (metadata)
+        contentCell.storeUint(0x00, 8);  // Set a prefix (used for basic content serialization)
+
+        // Storing Jetton metadata (example for name, symbol, description, etc.)
+        contentCell.storeRef(beginCell()
+            .storeUint(0, 8)  // Text field (0 indicates it's a simple text)
+            .storeStringTail("AlvinTon")  // Token name
+            .endCell());
+
+        contentCell.storeRef(beginCell()
+            .storeUint(0, 8)  // Text field
+            .storeStringTail("ATon")  // Token symbol
+            .endCell());
+
+        contentCell.storeRef(beginCell()
+            .storeUint(0, 8)  // Text field
+            .storeStringTail("alvin demo wrapper ton token.")  // Token description
+            .endCell());
+
+        // Optionally, add other metadata such as image, URL, or decimals.
+        contentCell.storeRef(beginCell()
+            .storeUint(0, 8)  // Text field
+            .storeStringTail("https://tomo-chains-photo.s3.us-west-1.amazonaws.com/op.svg")  // Token image URL
+            .endCell());
+
+        return contentCell.endCell();  // Complete the cell creation and return it
+    }
+
     static createFromConfig(config: JettonMinterConfig, code: Cell, workchain = 0) {
         const data = jettonMinterConfigToCell(config);
         const init = {code, data};

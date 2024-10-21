@@ -78,9 +78,7 @@ int total_pack:u16
 }
 
 ;;===========================================================================
-cell red_packet::Claim::se(
-slice recipient:addr
-) impure {
+cell red_packet::Claim::se(slice recipient:addr) impure {
     ~strdump("red_packet::Claim::se");
     return begin_cell()
         .store_slice(recipient:addr)

@@ -19,9 +19,7 @@
 #include "close.fc";
 #include "refund.fc";
 
-() @init_procedure(
-cell params
-) impure inline_ref {
+() @init_procedure(cell params) impure inline_ref {
 
     throw_unless(201, _state:u8 == state::router::initializing);
     throw_unless(202, equal_slices(sender:addr, _router_admin:addr));
@@ -42,11 +40,7 @@ cell params
     save_storage();
 }
 
-() @create_procedure(
-cell params,
-int jetton_amount:u256,
-slice from_wallet:addr
-) impure inline_ref {
+() @create_procedure(cell params, int jetton_amount:u256, slice from_wallet:addr) impure inline_ref {
 
     (
         int packet_type:u8,
@@ -66,9 +60,7 @@ slice from_wallet:addr
 }
 
 
-() @create_finished_procedure(
-cell params
-) impure inline_ref {
+() @create_finished_procedure(cell params) impure inline_ref {
 
     (
         int packet_type:u8,

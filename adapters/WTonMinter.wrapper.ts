@@ -52,13 +52,13 @@ export class WTonMinterWrapper implements Contract {
         let res = await provider.get('get_jetton_data', []);
         let totalSupply = res.stack.readBigNumber();
         let mintable = res.stack.readBoolean();
-        let adminAddress = res.stack.readAddress();
+        // let adminAddress = res.stack.readAddress();
         let content = res.stack.readCell();
         let walletCode = res.stack.readCell();
         return {
             totalSupply,
             mintable,
-            adminAddress,
+            //adminAddress,
             content,
             walletCode,
         };

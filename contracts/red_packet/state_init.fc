@@ -1,11 +1,6 @@
 #include "../imports/stdlib.fc";
 
-(cell) red_packet::state_init(
-cell red_packet_base_code:cell,
-int code_manager_public_key:u256,
-slice router:addr,
-int red_packet_index:u64
-) inline_ref {
+(cell) red_packet::state_init(cell red_packet_base_code:cell, int code_manager_public_key:u256, slice router:addr, int red_packet_index:u64) inline_ref {
     return begin_cell()
         .store_uint(0, 2)
         .store_dict(red_packet_base_code:cell) ;;code

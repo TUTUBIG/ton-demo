@@ -3,10 +3,7 @@
 
 #include "storage1.fc";
 
-(
-    slice, int, int, int,
-    int, int, int, int
-) get_storage() method_id {
+(slice, int, int, int, int, int, int, int) get_storage() method_id {
     load_storage();
 
     int total_supply:u256 = 0;
